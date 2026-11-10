@@ -53,11 +53,10 @@ func TestAttach_EmptyFieldsDoNotOverwrite(t *testing.T) {
 	}
 }
 
-func TestAttach_NilParent(t *testing.T) {
-	ctx := Attach(nil, "rid", "v1", "", "")
-	l := FromContext(ctx)
-	if l.RequestID != "rid" || l.V1 != "v1" {
-		t.Fatalf("FromContext = %+v", l)
+func TestAttach_EmptyAllReturnsParent(t *testing.T) {
+	parent := context.Background()
+	if got := Attach(parent, "", "", "", ""); got != parent {
+		t.Fatal("expected parent unchanged when all fields empty")
 	}
 }
 
