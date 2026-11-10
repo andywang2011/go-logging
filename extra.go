@@ -52,9 +52,39 @@ func NewContext(reqid, v1, v2, v3 string) context.Context {
 	}
 }
 
-// FromContext builds a Logger from context values set by NewContext or GetContext.
+// Attach stores non-empty request dimensions on parent, preserving cancel,
+// deadline, and other parent values. Empty fields are skipped so existing
+// parent values are not cleared. FromContext reads the same string keys as
+// NewContext / GetContext.
+func Attach(parent context.Context, reqid, v1, v2, v3 string) context.Context {
+	if parent == nil {
+		parent = context.Background()
+	}
+	m := make(map[string]string, 4)
+	if reqid != "" {
+		m[XRequestID] = reqid
+	}
+	if v1 != "" {
+		m["v1"] = v1
+	}
+	if v2 != "" {
+		m["v2"] = v2
+	}
+	if v3 != "" {
+		m["v3"] = v3
+	}
+	if len(m) == 0 {
+		return parent
+	}
+	return &__ctx__{m: m, Context: parent}
+}
+
+// FromContext builds a Logger from context values set by NewContext, GetContext, or Attach.
 func FromContext(ctx context.Context) *Logger {
 	l := &Logger{}
+	if ctx == nil {
+		return l
+	}
 	l.RequestID, _ = ctx.Value(XRequestID).(string)
 	l.V1, _ = ctx.Value("v1").(string)
 	l.V2, _ = ctx.Value("v2").(string)
