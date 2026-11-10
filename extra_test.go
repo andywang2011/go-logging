@@ -28,6 +28,39 @@ func TestFromContextEmpty(t *testing.T) {
 	}
 }
 
+func TestAttach_PreservesParentCancelAndReadsDimensions(t *testing.T) {
+	parent, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx := Attach(parent, "rid-1", "/api/ping", "", "")
+	l := FromContext(ctx)
+	if l.RequestID != "rid-1" || l.V1 != "/api/ping" {
+		t.Fatalf("FromContext = %+v", l)
+	}
+	cancel()
+	select {
+	case <-ctx.Done():
+	default:
+		t.Fatal("expected attached ctx to inherit parent cancel")
+	}
+}
+
+func TestAttach_EmptyFieldsDoNotOverwrite(t *testing.T) {
+	base := Attach(context.Background(), "keep-id", "keep-v1", "keep-v2", "keep-v3")
+	ctx := Attach(base, "", "", "new-v2", "")
+	l := FromContext(ctx)
+	if l.RequestID != "keep-id" || l.V1 != "keep-v1" || l.V2 != "new-v2" || l.V3 != "keep-v3" {
+		t.Fatalf("FromContext = %+v", l)
+	}
+}
+
+func TestAttach_NilParent(t *testing.T) {
+	ctx := Attach(nil, "rid", "v1", "", "")
+	l := FromContext(ctx)
+	if l.RequestID != "rid" || l.V1 != "v1" {
+		t.Fatalf("FromContext = %+v", l)
+	}
+}
+
 func TestSpreadMaps(t *testing.T) {
 	m := map[string][]string{
 		"single": {"one"},
